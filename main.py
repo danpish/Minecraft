@@ -11,13 +11,15 @@ from pyglet.gl import *
 from pyglet.graphics import TextureGroup
 from pyglet.window import key, mouse
 
+
 TICKS_PER_SEC = 60
 
 # Size of sectors used to ease block loading.
 SECTOR_SIZE = 16
+NORMAL_WALKING_SPEED = 5
 
-WALKING_SPEED = 5
-FLYING_SPEED = 15
+#WALKING_SPEED = 0
+#FLYING_SPEED = 15
 
 GRAVITY = 20.0
 MAX_JUMP_HEIGHT = 1.0 # About the height of a block.
@@ -490,6 +492,12 @@ class Window(pyglet.window.Window):
             x=10, y=self.height - 10, anchor_x='left', anchor_y='top',
             color=(0, 0, 0, 255))
 
+        #experminetal smooth moving speedup and slowdown
+        self.move_diagram = 0.0
+
+        self.looking_angle = [0, 0]
+        
+        self.move_angle = [0,0]
         # This call schedules the `update()` method to be called
         # TICKS_PER_SEC. This is the main game event loop.
         pyglet.clock.schedule_interval(self.update, 1.0 / TICKS_PER_SEC)
@@ -529,29 +537,40 @@ class Window(pyglet.window.Window):
             Tuple containing the velocity in x, y, and z respectively.
 
         """
+        #update move stats when pressing WASD
         if any(self.strafe):
-            x, y = self.rotation
+            self.looking_angle = self.rotation
             strafe = math.degrees(math.atan2(*self.strafe))
-            y_angle = math.radians(y)
-            x_angle = math.radians(x + strafe)
+            self.move_angle[1] = math.radians(self.looking_angle[1])
+            self.move_angle[0] = math.radians(self.looking_angle[0] + strafe) 
+        
+        # if moving (when pressing or not pressing WASD)
+        if self.move_diagram != 0.0:
             if self.flying:
-                m = math.cos(y_angle)
-                dy = math.sin(y_angle)
+                m_dy = 0
+                m = math.cos(self.move_angle[1])
+                strafe = math.degrees(self.move_angle[0]) - self.looking_angle[0]
+                
                 if self.strafe[1]:
                     # Moving left or right.
-                    dy = 0.0
                     m = 1
-                if self.strafe[0] > 0:
+                if self.strafe[0]:
+                    # Moving moving forward or backwards
+                    m_dy = 1
+                    
+                dy = math.sin(self.move_angle[1]) * m_dy
+                
+                if math.fabs(strafe) == strafe:
                     # Moving backwards.
                     dy *= -1
-                # When you are flying up or down, you have less left and right
+                    
                 # motion.
-                dx = math.cos(x_angle) * m
-                dz = math.sin(x_angle) * m
+                dx = math.cos(self.move_angle[0]) * m
+                dz = math.sin(self.move_angle[0]) * m
             else:
                 dy = 0.0
-                dx = math.cos(x_angle)
-                dz = math.sin(x_angle)
+                dx = math.cos(self.move_angle[0])
+                dz = math.sin(self.move_angle[0])
         else:
             dy = 0.0
             dx = 0.0
@@ -591,7 +610,17 @@ class Window(pyglet.window.Window):
 
         """
         # walking
-        speed = FLYING_SPEED if self.flying else WALKING_SPEED
+        if any(self.strafe):
+            if self.move_diagram < 3: 
+                self.move_diagram += 0.03125
+        else:
+            if self.move_diagram > 0: 
+                self.move_diagram -= 0.03125
+
+
+        WALKING_SPEED = (self.move_diagram * (1 / 3) ) ** 3 * 5 
+        FLYING_SPEED = (self.move_diagram * (1 / 3) ) ** 3 * 15 
+        speed = FLYING_SPEED if self.flying else WALKING_SPEED 
         d = dt * speed # distance covered this tick.
         dx, dy, dz = self.get_motion_vector()
         # New position in space, before accounting for gravity.
