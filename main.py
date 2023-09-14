@@ -549,13 +549,13 @@ class Window(pyglet.window.Window):
             if self.flying:
                 m_dy = 0
                 m = math.cos(self.move_angle[1])
-                strafe = math.degrees(self.move_angle[0]) - self.looking_angle[0]
+                strafe = math.degrees(self.move_angle[0]) - self.looking_angle[0] # This reconstrcuts previous strafe
                 
                 if self.strafe[1]:
                     # Moving left or right.
                     m = 1
                 if self.strafe[0]:
-                    # Moving moving forward or backwards
+                    # Moving moving forward or backwards.
                     m_dy = 1
                     
                 dy = math.sin(self.move_angle[1]) * m_dy
@@ -617,7 +617,7 @@ class Window(pyglet.window.Window):
             if self.move_diagram > 0: 
                 self.move_diagram -= 0.03125
 
-
+        #Multiply the default speed to a function that returns a number between 0, 1
         WALKING_SPEED = (self.move_diagram * (1 / 3) ) ** 3 * 5 
         FLYING_SPEED = (self.move_diagram * (1 / 3) ) ** 3 * 15 
         speed = FLYING_SPEED if self.flying else WALKING_SPEED 
